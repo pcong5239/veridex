@@ -76,7 +76,7 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
     };
     sdkMocks.createClient.mockReturnValue(client);
     vi.spyOn(rpcClient, 'getRawClient').mockReturnValue({
-      getTransactionReceipt: vi.fn().mockResolvedValue({ status: 'FINALIZED', execution_result: { status: 'SUCCESS' } }),
+      getTransaction: vi.fn().mockResolvedValue({ statusName: 'FINALIZED', txExecutionResultName: 'FINISHED_WITH_RETURN' }),
     } as any);
 
     const result = await writeManager.executeWrite(mockWallet, 'activate_channel', [1], async () => ({ status: 'ACTIVE' }));
@@ -299,6 +299,15 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       expect(writeManager.classifyReceipt({ status: 6 }).type).toBe('TERMINAL_AMBIGUOUS');
     });
 
+    it('classifies the exact GenLayer transaction shape returned by production', () => {
+      expect(writeManager.classifyReceipt({
+        status: 7,
+        statusName: 'FINALIZED',
+        txExecutionResult: 1,
+        txExecutionResultName: 'FINISHED_WITH_RETURN',
+      }).type).toBe('FINALIZED_SUCCESS');
+    });
+
     it('keeps NOT_VOTED non-terminal and unknown execution values fail-closed', () => {
       expect(writeManager.classifyReceipt({ statusName: 'ACCEPTED', txExecutionResultName: 'NOT_VOTED' }).type).toBe('NON_TERMINAL');
       expect(writeManager.classifyReceipt({ statusName: 'FINALIZED', txExecutionResultName: 'NOT_VOTED' }).type).toBe('NON_TERMINAL');
@@ -386,9 +395,9 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       writeManager.saveJournal([entry]);
 
       const mockRawClient = {
-        getTransactionReceipt: vi.fn().mockResolvedValue({
-          status: 'FINALIZED',
-          execution_result: { status: 'SUCCESS' },
+        getTransaction: vi.fn().mockResolvedValue({
+          statusName: 'FINALIZED',
+          txExecutionResultName: 'FINISHED_WITH_RETURN',
         }),
       };
       vi.spyOn(rpcClient, 'getRawClient').mockReturnValue(mockRawClient as any);

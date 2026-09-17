@@ -191,8 +191,8 @@ export class WriteManager {
     for (const entry of pending) {
       try {
         const rawClient = rpcClient.getRawClient();
-        const receipt = await rawClient.getTransactionReceipt({
-          hash: entry.hash as `0x${string}`,
+        const receipt = await rawClient.getTransaction({
+          hash: entry.hash as Parameters<typeof rawClient.getTransaction>[0]['hash'],
         });
 
         const classified = this.classifyReceipt(receipt);
@@ -219,8 +219,8 @@ export class WriteManager {
 
     try {
       const rawClient = rpcClient.getRawClient();
-      const receipt = await rawClient.getTransactionReceipt({
-        hash: hash as `0x${string}`,
+      const receipt = await rawClient.getTransaction({
+        hash: hash as Parameters<typeof rawClient.getTransaction>[0]['hash'],
       });
 
       const classified = this.classifyReceipt(receipt);
@@ -567,8 +567,8 @@ export class WriteManager {
       }
 
       try {
-        const receipt = await rawClient.getTransactionReceipt({
-          hash: hash as `0x${string}`,
+        const receipt = await rawClient.getTransaction({
+          hash: hash as Parameters<typeof rawClient.getTransaction>[0]['hash'],
         });
 
         if (typeof receipt === 'object' && receipt !== null &&
