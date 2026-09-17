@@ -69,7 +69,7 @@ Google Chrome and the explicitly selected OKX Wallet were used against the produ
 | Subscribe to channel 1 | `0x35940c022f3c14577a238b17353c7b007ddb8d16651fb9434f6cc688796c04da` | `FINALIZED`, `FINISHED_WITH_RETURN`, accepted | `SUBSCRIBED` |
 | Acknowledge epoch 2 | `0x554a1debdfa71ffae646a5d4e1df95e5321a254557289e637a9afad5e71bc83b` | `FINALIZED`, `FINISHED_WITH_RETURN`, accepted | `ACKNOWLEDGED (Epoch 2/2)` |
 
-The disconnected public reader displayed the operative bulletin, two-revision lineage, official NWS link, contract limits, upgrade status, and audit history. Invalid and overlength NWS URNs remained disabled and produced inline errors without opening the wallet. The selected wallet opened directly for writes without a browser confirmation or intermediary fee modal. Exact RPC measurements are in [RPC-BUDGET.md](RPC-BUDGET.md).
+The disconnected public reader displayed the operative bulletin, two-revision lineage, official NWS link, contract limits, upgrade status, and audit history. Invalid and overlength NWS URNs remained disabled and produced inline errors without opening the wallet. The selected wallet opened directly for writes without a browser confirmation or intermediary fee modal.
 
 ## Known limitations
 

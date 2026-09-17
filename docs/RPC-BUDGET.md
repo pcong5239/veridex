@@ -28,30 +28,3 @@ Required before implementing or repairing any GenLayer-connected frontend, inclu
 | Reconciliation | coordinator | receipt + method-specific view | reload/manual resume with stored hash | hash/journal | one monitor | after authoritative resolution | 3s, backoff max 10s; max 36 polls | no replacement transaction | 40 | 0 | safe terminal failure or authoritative state proof |
 
 For a read-only frontend, record transaction count `0`; do not invent write requirements. If no GenLayer frontend exists, record `NOT APPLICABLE` and the checked dependency boundary.
-
-## FRONTEND RPC BUDGET EVIDENCE
-
-FRONTEND_EVIDENCE_STATUS: COMPLETE
-
-Measured release: `dpl_7UEPb2cXSD5b4NBEYqgSg8FCjXpC` at `https://veridex-khaki.vercel.app`.
-
-Measure the exact deployed critical journeys before the applicable checkpoint and release.
-
-| Screen/workflow | Request source/method | Actual requests | Cache hit/miss | In-flight dedupe | Poll attempts | Retry/delay | Invalidations | Readback calls | Actual transactions | Variance/result |
-|---|---|---:|---|---|---:|---|---|---:|---:|---|
-| Disconnected public workspace | coordinator: channels, config, upgrade status, chains, audit page, operative alert, revisions | 7 | 0/7 on clean load | no duplicates observed | 0 | 0 | 0 | 0 | 0 | Within budget; public data and audit history rendered without a wallet |
-| Connect OKX Wallet | selected EIP-6963 provider plus subscription and acknowledgement views | 2 wallet identity/network calls; 2 contract views | public reads reused within 8-second cache | one selected provider | 0 | 0 | account-scoped views loaded | 2 | 0 | Exact account `0x8114...eBfB`, chain 61997 |
-| Subscribe channel 1 | simulate, fee derivation, selected-provider send, GenLayer transaction polling | 4 finality polls | consequential reads uncached after invalidation | one active monitor | 4 | 2.5s bounded exponential backoff | all read cache cleared after finality | 1 subscription read plus reload reconciliation | 1 | Hash retained; no replacement transaction; final readback `SUBSCRIBED` |
-| Acknowledge epoch 2 | simulate, fee derivation, selected-provider send, GenLayer transaction polling | 3 finality polls | consequential reads uncached after invalidation | one active monitor | 3 | 2.5s bounded exponential backoff | all read cache cleared after finality | 1 acknowledgement read plus reload reconciliation | 1 | Hash retained; no replacement transaction; final readback epoch 2/2 |
-| Invalid refresher input | local bounded URN validation | 0 | not applicable | not applicable | 0 | 0 | 0 | 0 | 0 | Invalid and 257-character inputs stayed disabled; no RPC or wallet request |
-| Final-release reconciliation | coordinator `getTransaction` plus account-scoped views | 1 transaction lookup; 2 contract views | clean release load | one retained hash | 1 | no retry required | resolved journal entry | 2 | 0 | Raw numeric `7/1` and named finality both resolved; warning cleared |
-
-## Closure
-
-- No unexplained multiple read clients.
-- No render/Strict-Mode request amplification.
-- Polling is bounded and tears down on hidden, unmounted, disconnected, settled and aborted states.
-- `429`/transport retry is bounded, honors `Retry-After` when supplied and supports cancellation.
-- A returned transaction hash is reconciled; no automatic or duplicate resubmission occurs.
-- Mandatory finality, semantic execution and authoritative readback remain intact.
-- Measurements must be captured against the exact deployed frontend release.
