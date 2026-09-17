@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WriteManager } from '../services/writeManager';
+import { getWriteProvider, WriteManager } from '../services/writeManager';
 import { ConnectedWallet } from '../types';
 import { appConfig } from '../config';
 import { rpcClient } from '../services/rpcClient';
@@ -32,6 +32,36 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       if (method === 'eth_chainId') return '0xf22d';
       if (method === 'eth_accounts') return [mockWallet.address];
       return null;
+    });
+  });
+
+  it('keeps the selected OKX provider but removes redundant wallet-owned send fields', async () => {
+    const request = vi.fn().mockResolvedValue('0xhash');
+    const provider = getWriteProvider({ ...mockWallet, brand: 'OKX Wallet', provider: { request } });
+    await provider.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: mockWallet.address,
+        to: appConfig.contractAddress,
+        data: '0x1234',
+        value: '0x1',
+        gas: '0x30d40',
+        nonce: '0x0',
+        type: '0x0',
+        chainId: '0xf22d',
+        gasPrice: '0x0',
+      }],
+    });
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: mockWallet.address,
+        to: appConfig.contractAddress,
+        data: '0x1234',
+        value: '0x1',
+        gas: '0x30d40',
+      }],
     });
   });
 
@@ -73,7 +103,24 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
     expect(client.writeContract).toHaveBeenCalledOnce();
     expect(result.success).toBe(false);
     expect(result.hash).toBeUndefined();
+    expect(result.error).toBe('The wallet request was rejected. No transaction was submitted.');
     expect(writeManager.getStage()).toBe('REJECTED');
+  });
+
+  it('does not expose localized provider details or library versions in public errors', async () => {
+    const client = {
+      estimateTransactionFeesForWrite: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 2n }),
+      simulateWriteContract: vi.fn().mockResolvedValue({}),
+      estimateTransactionFeesFromSimulation: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 4n }),
+      writeContract: vi.fn().mockRejectedValue(new Error('An internal error was received. Details: Thông số giao dịch không hợp lệ. Version: viem@2.55.19')),
+    };
+    sdkMocks.createClient.mockReturnValue(client);
+    const okxWallet = { ...mockWallet, brand: 'OKX Wallet' as const };
+
+    const result = await writeManager.executeWrite(okxWallet, 'subscribe', [1], async () => ({}));
+
+    expect(result.error).toBe('OKX Wallet could not prepare this transaction. No transaction was submitted. Reconnect the wallet and try again.');
+    expect(result.error).not.toMatch(/Thông số|viem/i);
   });
 
   // Test 31: Production runtime visibly blocks writes when contract address is absent

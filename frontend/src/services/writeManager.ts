@@ -29,6 +29,32 @@ function safeJsonStringify(obj: unknown): string {
   return JSON.stringify(obj, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
 }
 
+export function getWriteProvider(wallet: ConnectedWallet): ConnectedWallet['provider'] {
+  if (wallet.brand !== 'OKX Wallet') return wallet.provider;
+  return {
+    request: ({ method, params }) => {
+      if (method !== 'eth_sendTransaction' || !Array.isArray(params) ||
+          typeof params[0] !== 'object' || params[0] === null) {
+        return wallet.provider.request({ method, params });
+      }
+      const transaction = { ...(params[0] as Record<string, unknown>) };
+      delete transaction.nonce;
+      delete transaction.type;
+      delete transaction.chainId;
+      delete transaction.gasPrice;
+      return wallet.provider.request({ method, params: [transaction] });
+    },
+  };
+}
+
+function publicWriteError(message: string, walletBrand: ConnectedWallet['brand'], userRejected: boolean): string {
+  if (userRejected) return 'The wallet request was rejected. No transaction was submitted.';
+  if (/invalid (transaction )?params|invalid transaction parameters|internal error|thông số giao dịch/i.test(message)) {
+    return `${walletBrand} could not prepare this transaction. No transaction was submitted. Reconnect the wallet and try again.`;
+  }
+  return message.replace(/\s*Version:\s*viem@[^\s]+\s*$/i, '').trim();
+}
+
 export class WriteManager {
   private currentStage: TxStage = 'IDLE';
   private currentHash: string | null = null;
@@ -388,7 +414,7 @@ export class WriteManager {
       // 4. Dedicated Provider Write Routing
       const writeClient = createClient({
         chain: studioDevnet,
-        provider: wallet.provider as any,
+        provider: getWriteProvider(wallet) as any,
         account: wallet.address as `0x${string}`,
       });
       const liveChain = await wallet.provider.request({ method: 'eth_chainId' });
@@ -486,6 +512,7 @@ export class WriteManager {
         : undefined;
       const userRejected = !hashExists &&
         (Number(errorCode) === 4001 || /user rejected|user denied|user cancelled/i.test(errMsg));
+      const publicError = publicWriteError(errMsg, wallet.brand, userRejected);
       const ambiguousSubmission = submissionAttempted && !hashExists && !userRejected;
       confirmedFailure = errMsg.includes('Transaction FINALIZED with error:');
       this.currentStage = userRejected
@@ -493,9 +520,9 @@ export class WriteManager {
         : (hashExists && !confirmedFailure) || ambiguousSubmission
           ? 'RECONCILIATION_REQUIRED'
           : 'FAILED';
-      this.currentError = errMsg;
+      this.currentError = publicError;
       journalEntry.status = (hashExists && !confirmedFailure) || ambiguousSubmission ? 'PENDING' : 'FAILED';
-      journalEntry.error = errMsg;
+      journalEntry.error = publicError;
       const errorSaved = this.saveJournal(journal);
       releaseLock = (!hashExists && !ambiguousSubmission) || confirmedFailure ? errorSaved : false;
       this.notify();
@@ -503,7 +530,7 @@ export class WriteManager {
       return {
         success: false,
         hash: this.currentHash || undefined,
-        error: errMsg,
+        error: publicError,
       };
     } finally {
       this.monitoringController = null;
