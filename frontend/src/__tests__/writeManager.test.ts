@@ -121,6 +121,30 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
 
     expect(result.error).toBe('OKX Wallet could not prepare this transaction. No transaction was submitted. Reconnect the wallet and try again.');
     expect(result.error).not.toMatch(/Thông số|viem/i);
+    expect(writeManager.getStage()).toBe('FAILED');
+    expect(writeManager.loadJournal()[0].status).toBe('FAILED');
+  });
+
+  it('migrates a legacy invalid-parameters intent with no hash out of pending state', async () => {
+    writeManager.saveJournal([{
+      intentId: 'legacy-invalid-params',
+      account: mockWallet.address,
+      chainId: 61997,
+      contractAddress: appConfig.contractAddress,
+      method: 'subscribe',
+      args: [1],
+      createdAt: Date.now(),
+      hash: '',
+      status: 'PENDING',
+      error: 'An internal error was received. Details: Thông số giao dịch không hợp lệ. Version: viem@2.55.19',
+    }]);
+
+    await writeManager.reconcileJournal();
+
+    expect(writeManager.loadJournal()[0]).toMatchObject({
+      status: 'FAILED',
+      error: 'The wallet could not prepare this transaction. No transaction was submitted.',
+    });
   });
 
   // Test 31: Production runtime visibly blocks writes when contract address is absent

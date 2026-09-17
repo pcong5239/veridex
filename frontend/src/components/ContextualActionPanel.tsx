@@ -287,7 +287,7 @@ export const ContextualActionPanel: React.FC<ContextualActionPanelProps> = ({
       {/* Reader Tab */}
       {activeTab === 'READER' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Disconnected Public Verification</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 700 }}>{activeWallet ? 'Connected Public Verification' : 'Disconnected Public Verification'}</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
             You are reading Veridex's public GenLayer consensus record. Alert revisions and normalized instruction changes remain available without connecting a wallet.
           </p>

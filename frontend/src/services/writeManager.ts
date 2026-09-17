@@ -55,6 +55,11 @@ function publicWriteError(message: string, walletBrand: ConnectedWallet['brand']
   return message.replace(/\s*Version:\s*viem@[^\s]+\s*$/i, '').trim();
 }
 
+function isDefinitePreBroadcastError(message: string, code?: unknown): boolean {
+  return Number(code) === -32602 ||
+    /invalid (transaction )?params|invalid transaction parameters|thông số giao dịch không hợp lệ/i.test(message);
+}
+
 export class WriteManager {
   private currentStage: TxStage = 'IDLE';
   private currentHash: string | null = null;
@@ -171,6 +176,15 @@ export class WriteManager {
     } catch {
       return;
     }
+    let journalChanged = false;
+    for (const entry of journal) {
+      if (entry.status === 'PENDING' && !entry.hash && isDefinitePreBroadcastError(entry.error || '')) {
+        entry.status = 'FAILED';
+        entry.error = 'The wallet could not prepare this transaction. No transaction was submitted.';
+        journalChanged = true;
+      }
+    }
+    if (journalChanged) this.saveJournal(journal);
     const pending = journal.filter((e) => e.status === 'PENDING' && e.hash);
     if (pending.length === 0) return;
 
@@ -512,8 +526,9 @@ export class WriteManager {
         : undefined;
       const userRejected = !hashExists &&
         (Number(errorCode) === 4001 || /user rejected|user denied|user cancelled/i.test(errMsg));
+      const definitePreBroadcastFailure = !hashExists && isDefinitePreBroadcastError(errMsg, errorCode);
       const publicError = publicWriteError(errMsg, wallet.brand, userRejected);
-      const ambiguousSubmission = submissionAttempted && !hashExists && !userRejected;
+      const ambiguousSubmission = submissionAttempted && !hashExists && !userRejected && !definitePreBroadcastFailure;
       confirmedFailure = errMsg.includes('Transaction FINALIZED with error:');
       this.currentStage = userRejected
         ? 'REJECTED'
