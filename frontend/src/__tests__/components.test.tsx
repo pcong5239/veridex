@@ -202,6 +202,7 @@ describe('React Component Rendering & Accessibility', () => {
       expect(submittedHtml).toContain('Copy hash');
 
       const phases = [
+        'FEE_REVIEW',
         'WAITING_FOR_WALLET',
         'WAITING_FOR_FINALITY',
         'VERIFYING_EXECUTION',

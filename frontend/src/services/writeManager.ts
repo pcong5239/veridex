@@ -29,6 +29,13 @@ function safeJsonStringify(obj: unknown): string {
   return JSON.stringify(obj, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
 }
 
+export interface FeeReview {
+  method: string;
+  feeValue: string;
+}
+
+type FeeApprovalHandler = (review: FeeReview) => Promise<boolean>;
+
 export class WriteManager {
   private currentStage: TxStage = 'IDLE';
   private currentHash: string | null = null;
@@ -37,6 +44,7 @@ export class WriteManager {
   private isProcessing = false;
   private volatilePendingLocks = new Set<string>();
   private monitoringController: AbortController | null = null;
+  private feeApprovalHandler: FeeApprovalHandler | null = null;
   private readonly ready: Promise<void>;
 
   constructor() {
@@ -64,6 +72,10 @@ export class WriteManager {
 
   public getError(): string | null {
     return this.currentError;
+  }
+
+  public setFeeApprovalHandler(handler: FeeApprovalHandler | null): void {
+    this.feeApprovalHandler = handler;
   }
 
   public resetState(): void {
@@ -416,11 +428,24 @@ export class WriteManager {
         messageAllocations: estimate.messageAllocations,
         feeValue: estimate.feeValue,
       };
-      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
-        const approved = window.confirm(`Review the exact GenLayer fee object before signing:\n${safeJsonStringify(exactFees)}\n\nContinue to wallet signature?`);
-        if (!approved) throw Object.assign(new Error('User cancelled after fee review.'), { code: 4001 });
+      this.currentStage = 'FEE_REVIEW';
+      this.notify();
+      if (!this.feeApprovalHandler) {
+        throw new Error('Fee review is unavailable. No wallet request or transaction was submitted.');
+      }
+      const approved = await this.feeApprovalHandler({
+        method,
+        feeValue: String(exactFees.feeValue),
+      });
+      if (!approved) {
+        throw Object.assign(
+          new Error('Fee review cancelled. No wallet request or transaction was submitted.'),
+          { code: 'FEE_REVIEW_CANCELLED' }
+        );
       }
 
+      this.currentStage = 'WAITING_FOR_WALLET';
+      this.notify();
       submissionAttempted = true;
       const hash = await writeClient.writeContract({ ...writeRequest, fees: exactFees });
 
@@ -487,9 +512,11 @@ export class WriteManager {
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       const errorCode = typeof err === 'object' && err !== null && 'code' in err
-        ? Number((err as { code?: unknown }).code)
-        : NaN;
-      const userRejected = !hashExists && (errorCode === 4001 || /user rejected|user denied|user cancelled/i.test(errMsg));
+        ? (err as { code?: unknown }).code
+        : undefined;
+      const feeReviewCancelled = errorCode === 'FEE_REVIEW_CANCELLED';
+      const userRejected = !hashExists && !feeReviewCancelled &&
+        (Number(errorCode) === 4001 || /user rejected|user denied|user cancelled/i.test(errMsg));
       const ambiguousSubmission = submissionAttempted && !hashExists && !userRejected;
       confirmedFailure = errMsg.includes('Transaction FINALIZED with error:');
       this.currentStage = userRejected

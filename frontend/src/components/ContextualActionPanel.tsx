@@ -10,6 +10,9 @@ import {
 import { writeManager } from '../services/writeManager';
 import { ConfirmationModal } from './ConfirmationModal';
 
+export const isValidNwsUrn = (value: string): boolean =>
+  /^urn:oid:2\.49\.0\.1\.840\.0\.[A-Za-z0-9._-]+$/.test(value.trim());
+
 interface ContextualActionPanelProps {
   activeWallet: ConnectedWallet | null;
   selectedChannel: ChannelRecord | null;
@@ -143,7 +146,7 @@ export const ContextualActionPanel: React.FC<ContextualActionPanelProps> = ({
     setRefresherError(null);
 
     const urn = ingestUrnInput.trim();
-    if (!urn.startsWith('urn:oid:2.49.0.1.840.0.')) {
+    if (!isValidNwsUrn(urn)) {
       return setRefresherError('Invalid NWS URN. Expected format: urn:oid:2.49.0.1.840.0...');
     }
 
@@ -169,7 +172,7 @@ export const ContextualActionPanel: React.FC<ContextualActionPanelProps> = ({
     setRefresherError(null);
 
     const candidate = candidateUrnInput.trim();
-    if (!candidate.startsWith('urn:oid:2.49.0.1.840.0.')) {
+    if (!isValidNwsUrn(candidate)) {
       return setRefresherError('Invalid candidate NWS URN format.');
     }
 
@@ -338,16 +341,21 @@ export const ContextualActionPanel: React.FC<ContextualActionPanelProps> = ({
                     placeholder="urn:oid:2.49.0.1.840.0.965b..."
                     value={ingestUrnInput}
                     onChange={(e) => setIngestUrnInput(e.target.value)}
+                    aria-invalid={ingestUrnInput.trim() !== '' && !isValidNwsUrn(ingestUrnInput)}
+                    aria-describedby="ingest-urn-help ingest-urn-error"
                     required
                   />
-                  <span className="form-help">
+                  <span id="ingest-urn-help" className="form-help">
                     Must start with urn:oid:2.49.0.1.840.0. Derived API endpoint will be verified by GenLayer validators.
                   </span>
+                  {ingestUrnInput.trim() !== '' && !isValidNwsUrn(ingestUrnInput) && (
+                    <span id="ingest-urn-error" className="form-help" role="alert">Enter a complete NWS alert URN.</span>
+                  )}
                 </div>
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={isSubmitting || !ingestUrnInput.trim()}
+                  disabled={isSubmitting || !isValidNwsUrn(ingestUrnInput)}
                 >
                   {activeWallet ? 'Ingest Alert to Channel' : 'Connect Wallet to Ingest'}
                 </button>
@@ -366,16 +374,21 @@ export const ContextualActionPanel: React.FC<ContextualActionPanelProps> = ({
                       placeholder="urn:oid:2.49.0.1.840.0.b87c..."
                       value={candidateUrnInput}
                       onChange={(e) => setCandidateUrnInput(e.target.value)}
+                      aria-invalid={candidateUrnInput.trim() !== '' && !isValidNwsUrn(candidateUrnInput)}
+                      aria-describedby="candidate-urn-help candidate-urn-error"
                       required
                     />
-                    <span className="form-help">
+                    <span id="candidate-urn-help" className="form-help">
                       Candidate alert referencing root URN {selectedChain.root_urn.slice(0, 30)}...
                     </span>
+                    {candidateUrnInput.trim() !== '' && !isValidNwsUrn(candidateUrnInput) && (
+                      <span id="candidate-urn-error" className="form-help" role="alert">Enter a complete NWS revision URN.</span>
+                    )}
                   </div>
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={isSubmitting || !candidateUrnInput.trim()}
+                    disabled={isSubmitting || !isValidNwsUrn(candidateUrnInput)}
                   >
                     {activeWallet ? 'Submit Revision Candidate' : 'Connect Wallet to Submit'}
                   </button>

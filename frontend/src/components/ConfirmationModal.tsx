@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   isDestructive?: boolean;
@@ -93,9 +93,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </button>
         </div>
 
-        <p id="confirm-modal-desc" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+        <div id="confirm-modal-desc" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
           {message}
-        </p>
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
           <button

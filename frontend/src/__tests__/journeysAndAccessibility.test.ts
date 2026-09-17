@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { appConfig } from '../config';
 import { parseAcknowledgementJson } from '../parsers/contractParsers';
+import { isValidNwsUrn } from '../components/ContextualActionPanel';
 
 describe('User Journeys, Accessibility & Safety Guardrails', () => {
+  it('accepts only the same bounded NWS URN grammar enforced by the contract', () => {
+    expect(isValidNwsUrn('urn:oid:2.49.0.1.840.0.abc-123_DEF')).toBe(true);
+    expect(isValidNwsUrn('invalid-urn')).toBe(false);
+    expect(isValidNwsUrn('urn:oid:2.49.0.1.840.0.')).toBe(false);
+    expect(isValidNwsUrn('urn:oid:2.49.0.1.840.0.bad value')).toBe(false);
+  });
   // Test 32: No placeholder contract address in production source/configuration
   it('ensures no placeholder or fabricated contract addresses exist in config or environment defaults', () => {
     expect(appConfig.contractAddress === '' || /^0x[0-9a-fA-F]{40}$/.test(appConfig.contractAddress)).toBe(true);
