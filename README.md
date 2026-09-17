@@ -4,7 +4,7 @@ Veridex turns live National Weather Service alert revisions into a consensus-bac
 
 ## Verified links
 
-- Live app: added after the production Vercel deployment
+- Live app: https://veridex-khaki.vercel.app
 - Public repository: https://github.com/pcong5239/veridex
 - Studio development preview explorer: https://explorer-studio-dev.genlayer.com
 - Intelligent Contract: `0xb655FCc6338D77E117Ee8192bcF2D85759226a40`
@@ -87,7 +87,7 @@ npm run typecheck --prefix frontend
 npm run build --prefix frontend
 ```
 
-Current exact-release results: 20 contract tests passed, 70 frontend tests passed, TypeScript typecheck passed, and the production build passed. The deployed contract source readback is byte-identical to `contracts/veridex.py`; see [verification evidence](docs/VERIFICATION.md).
+Current exact-release results: 20 contract tests passed, 76 frontend tests passed, TypeScript typecheck passed, and the production build passed. The deployed contract source readback is byte-identical to `contracts/veridex.py`; see [verification evidence](docs/VERIFICATION.md).
 
 ## Deployment and recovery
 

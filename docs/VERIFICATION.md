@@ -2,7 +2,7 @@
 
 ## Exact release
 
-- Application source commit: `dbfc2b2c8bba3d367302a3c1217802edbb315bfc`
+- Deployed frontend source commit: `b23c90aa3bf33bad0843950d5d89cfdf66edbd14`
 - Contract source: `contracts/veridex.py`
 - Contract SHA-256: `124E671ED173FB72E31ABB30B2F461324E4D0F39CC84808CBF26C2F852E61B9C`
 - GenVM: `v0.6.0-rc5`
@@ -47,14 +47,29 @@ Final readbacks show channel 1 `ACTIVE`, chain epoch 2, exactly two revisions, t
 | Check | Command | Result |
 |---|---|---|
 | Contract tests | `python -m pytest -q` | 20 passed |
-| Frontend tests | `npm test --prefix frontend` | 70 passed |
+| Frontend tests | `npm test --prefix frontend` | 76 passed |
 | TypeScript | `npm run typecheck --prefix frontend` | PASS |
 | Production build | `npm run build --prefix frontend` | PASS |
 
 ## Web release
 
-- Production URL: added after Vercel deployment
-- Browser-wallet E2E and measured RPC counts: recorded against the exact deployed release before final verification
+- Production URL: https://veridex-khaki.vercel.app
+- Verified release URL: https://veridex-khaki.vercel.app/app?release=dpl_7UEPb2cXSD5b4NBEYqgSg8FCjXpC&attempt=1
+- Vercel deployment: `dpl_7UEPb2cXSD5b4NBEYqgSg8FCjXpC` (`READY`)
+- Built workspace asset: `Workspace-Di3lz1mD.js`
+- Generated bundle contains the exact contract address, chain `61997`, Studio development RPC, and raw-enum finality compatibility path.
+- `/` and `/app` return HTTP 200 through the production SPA deployment.
+
+## Browser-wallet proof
+
+Google Chrome and the explicitly selected OKX Wallet were used against the production release. The user confirmed wallet popups; the application performed all other actions, preserved returned hashes, and never resubmitted an unresolved intent.
+
+| Journey | Transaction | GenLayer result | Authoritative browser readback |
+|---|---|---|---|
+| Subscribe to channel 1 | `0x35940c022f3c14577a238b17353c7b007ddb8d16651fb9434f6cc688796c04da` | `FINALIZED`, `FINISHED_WITH_RETURN`, accepted | `SUBSCRIBED` |
+| Acknowledge epoch 2 | `0x554a1debdfa71ffae646a5d4e1df95e5321a254557289e637a9afad5e71bc83b` | `FINALIZED`, `FINISHED_WITH_RETURN`, accepted | `ACKNOWLEDGED (Epoch 2/2)` |
+
+The disconnected public reader displayed the operative bulletin, two-revision lineage, official NWS link, contract limits, upgrade status, and audit history. Invalid and overlength NWS URNs remained disabled and produced inline errors without opening the wallet. The selected wallet opened directly for writes without a browser confirmation or intermediary fee modal. Exact RPC measurements are in [RPC-BUDGET.md](RPC-BUDGET.md).
 
 ## Known limitations
 
