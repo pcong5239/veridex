@@ -1,5 +1,6 @@
 import { createClient } from 'genlayer-js';
 import { studioDevnet } from 'genlayer-js/chains';
+import { executionResultNumberToName, transactionsStatusNumberToName } from 'genlayer-js/types';
 import {
   ConnectedWallet,
   TxIntent,
@@ -257,8 +258,14 @@ export class WriteManager {
       error?: string;
     };
 
-    const status = String(r.statusName ?? r.status ?? '').toUpperCase();
-    const execution = String(r.txExecutionResultName ?? '').toUpperCase();
+    const statusValue = typeof r.status === 'number'
+      ? (transactionsStatusNumberToName as Record<string, string>)[String(r.status)] ?? r.status
+      : r.status;
+    const executionValue = typeof r.txExecutionResult === 'number'
+      ? (executionResultNumberToName as Record<string, string>)[String(r.txExecutionResult)] ?? r.txExecutionResult
+      : r.txExecutionResult;
+    const status = String(r.statusName ?? statusValue ?? '').toUpperCase();
+    const execution = String(r.txExecutionResultName ?? executionValue ?? '').toUpperCase();
 
     // The browser SDK can expose the raw numeric enum fields before its
     // derived names are attached. GenLayer status 7 + execution result 1 is
@@ -279,7 +286,7 @@ export class WriteManager {
       return { type: 'TERMINAL_AMBIGUOUS', rawReceipt: receipt };
     }
 
-    if (status === 'UNDETERMINED' || status === 'PROPOSED' || status === 'PENDING' || status === '') {
+    if (['UNINITIALIZED', 'PENDING', 'PROPOSED', 'PROPOSING', 'COMMITTING', 'REVEALING', 'ACCEPTED', 'UNDETERMINED', 'APPEAL_REVEALING', 'APPEAL_COMMITTING', 'LEADER_REVEALING', ''].includes(status)) {
       return { type: 'NON_TERMINAL', status: status || 'PENDING' };
     }
 

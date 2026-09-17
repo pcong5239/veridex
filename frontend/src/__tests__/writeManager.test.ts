@@ -296,7 +296,35 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       expect(writeManager.classifyReceipt({ statusName: 'PENDING', txExecutionResultName: 'UNDETERMINED' }).type).toBe('NON_TERMINAL');
       expect(writeManager.classifyReceipt({ statusName: 'FINALIZED', txExecutionResultName: 'FINISHED_WITH_RETURN' }).type).toBe('FINALIZED_SUCCESS');
       expect(writeManager.classifyReceipt({ statusName: 'FINALIZED', txExecutionResultName: 'TIMEOUT' }).type).toBe('FINALIZED_FAILURE');
-      expect(writeManager.classifyReceipt({ status: 6 }).type).toBe('TERMINAL_AMBIGUOUS');
+      expect(writeManager.classifyReceipt({ status: 5, txExecutionResult: 0 }).type).toBe('NON_TERMINAL');
+      expect(writeManager.classifyReceipt({ status: 6, txExecutionResult: 0 }).type).toBe('NON_TERMINAL');
+    });
+
+    it('normalizes numeric SDK states and waits for finalized execution', async () => {
+      const client = {
+        estimateTransactionFeesForWrite: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 1n }),
+        simulateWriteContract: vi.fn().mockResolvedValue({}),
+        estimateTransactionFeesFromSimulation: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 1n }),
+        writeContract: vi.fn().mockResolvedValue('0xnumeric'),
+      };
+      const getTransaction = vi.fn()
+        .mockResolvedValueOnce({ status: 5, txExecutionResult: 0 })
+        .mockResolvedValueOnce({ status: 7, txExecutionResult: 1 });
+      sdkMocks.createClient.mockReturnValue(client);
+      vi.spyOn(rpcClient, 'getRawClient').mockReturnValue({ getTransaction } as any);
+      vi.spyOn(writeManager as any, 'abortableDelay').mockResolvedValue(undefined);
+
+      const result = await writeManager.executeWrite(
+        mockWallet,
+        'create_channel',
+        ['nonce', 'Channel', 'IAZ076'],
+        async () => ({ channel_id: 4, name: 'Channel' }),
+        (channel) => channel.channel_id === 4
+      );
+
+      expect(result.success).toBe(true);
+      expect(getTransaction).toHaveBeenCalledTimes(2);
+      expect(writeManager.getStage()).toBe('SUCCESS');
     });
 
     it('classifies the exact GenLayer transaction shape returned by production', () => {
