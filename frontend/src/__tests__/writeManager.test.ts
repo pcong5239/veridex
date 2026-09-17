@@ -306,6 +306,10 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
         txExecutionResult: 1,
         txExecutionResultName: 'FINISHED_WITH_RETURN',
       }).type).toBe('FINALIZED_SUCCESS');
+      expect(writeManager.classifyReceipt({
+        status: 7,
+        txExecutionResult: 1,
+      }).type).toBe('FINALIZED_SUCCESS');
     });
 
     it('keeps NOT_VOTED non-terminal and unknown execution values fail-closed', () => {

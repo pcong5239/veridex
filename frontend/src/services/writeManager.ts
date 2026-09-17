@@ -260,6 +260,13 @@ export class WriteManager {
     const status = String(r.statusName ?? r.status ?? '').toUpperCase();
     const execution = String(r.txExecutionResultName ?? '').toUpperCase();
 
+    // The browser SDK can expose the raw numeric enum fields before its
+    // derived names are attached. GenLayer status 7 + execution result 1 is
+    // the same FINALIZED / FINISHED_WITH_RETURN pair returned by the SDK CLI.
+    if (r.status === 7 && r.txExecutionResult === 1) {
+      return { type: 'FINALIZED_SUCCESS' };
+    }
+
     const hasCurrentSdkFields = r.statusName !== undefined || r.txExecutionResultName !== undefined || r.txExecutionResult !== undefined;
     if (hasCurrentSdkFields && (status === 'ACCEPTED' || status === 'FINALIZED')) {
       if (execution === 'FINISHED_WITH_RETURN') return { type: 'FINALIZED_SUCCESS' };
