@@ -1,0 +1,14 @@
+.git/
+.vercel/
+*.md
+contracts/
+docs/
+tests/
+pyproject.toml
+frontend/.env*
+frontend/node_modules/
+frontend/dist/
+artifacts/
+.pytest_cache/
+**/__pycache__/
+*.pyc
