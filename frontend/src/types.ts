@@ -45,7 +45,6 @@ export interface WalletSnapshot {
 
 export type TxStage =
   | 'IDLE'
-  | 'FEE_REVIEW'
   | 'WAITING_FOR_WALLET'
   | 'SUBMITTED'
   | 'WAITING_FOR_FINALITY'

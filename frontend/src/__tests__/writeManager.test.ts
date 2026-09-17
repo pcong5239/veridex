@@ -45,8 +45,6 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       writeContract: vi.fn().mockResolvedValue('0xabc123'),
     };
     sdkMocks.createClient.mockReturnValue(client);
-    const approveFee = vi.fn().mockResolvedValue(true);
-    writeManager.setFeeApprovalHandler(approveFee);
     vi.spyOn(rpcClient, 'getRawClient').mockReturnValue({
       getTransactionReceipt: vi.fn().mockResolvedValue({ status: 'FINALIZED', execution_result: { status: 'SUCCESS' } }),
     } as any);
@@ -55,31 +53,27 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
     expect(result.success).toBe(true);
     expect(client.estimateTransactionFeesForWrite).toHaveBeenCalledBefore(client.simulateWriteContract);
     expect(client.estimateTransactionFeesFromSimulation).toHaveBeenCalledBefore(client.writeContract);
-    expect(approveFee).toHaveBeenCalledWith(expect.objectContaining({
-      method: 'activate_channel',
-      feeValue: '4',
-    }));
     expect(client.writeContract).toHaveBeenCalledWith(expect.objectContaining({
       fees: { distribution: exact.distribution, messageAllocations: [], feeValue: 4n },
     }));
   });
 
-  it('cancels fee review before wallet submission without reporting a wallet rejection', async () => {
+  it('routes directly to the wallet and classifies a denied signature without a hash', async () => {
+    const rejected = Object.assign(new Error('User denied request signature.'), { code: 4001 });
     const client = {
       estimateTransactionFeesForWrite: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 2n }),
       simulateWriteContract: vi.fn().mockResolvedValue({}),
       estimateTransactionFeesFromSimulation: vi.fn().mockResolvedValue({ distribution: {}, messageAllocations: [], feeValue: 4n }),
-      writeContract: vi.fn(),
+      writeContract: vi.fn().mockRejectedValue(rejected),
     };
     sdkMocks.createClient.mockReturnValue(client);
-    writeManager.setFeeApprovalHandler(vi.fn().mockResolvedValue(false));
 
     const result = await writeManager.executeWrite(mockWallet, 'subscribe', [1], async () => ({}));
 
+    expect(client.writeContract).toHaveBeenCalledOnce();
     expect(result.success).toBe(false);
-    expect(result.error).toBe('Fee review cancelled. No wallet request or transaction was submitted.');
-    expect(writeManager.getStage()).toBe('FAILED');
-    expect(client.writeContract).not.toHaveBeenCalled();
+    expect(result.hash).toBeUndefined();
+    expect(writeManager.getStage()).toBe('REJECTED');
   });
 
   // Test 31: Production runtime visibly blocks writes when contract address is absent
@@ -296,7 +290,6 @@ describe('Write Safety, Intent Journaling & Reconciliation', () => {
       writeContract: vi.fn().mockRejectedValue(new Error('transport timeout after broadcast')),
     };
     sdkMocks.createClient.mockReturnValue(client);
-    writeManager.setFeeApprovalHandler(vi.fn().mockResolvedValue(true));
     const first = await writeManager.executeWrite(mockWallet, 'activate_channel', [1], async () => null);
     expect(first.success).toBe(false);
     expect(writeManager.getStage()).toBe('RECONCILIATION_REQUIRED');

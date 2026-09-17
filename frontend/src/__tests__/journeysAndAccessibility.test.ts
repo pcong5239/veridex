@@ -9,6 +9,10 @@ describe('User Journeys, Accessibility & Safety Guardrails', () => {
     expect(isValidNwsUrn('invalid-urn')).toBe(false);
     expect(isValidNwsUrn('urn:oid:2.49.0.1.840.0.')).toBe(false);
     expect(isValidNwsUrn('urn:oid:2.49.0.1.840.0.bad value')).toBe(false);
+    expect(isValidNwsUrn('x'.repeat(15))).toBe(false);
+    expect(isValidNwsUrn('x'.repeat(16))).toBe(false);
+    expect(isValidNwsUrn(`urn:oid:2.49.0.1.840.0.${'x'.repeat(233)}`)).toBe(true);
+    expect(isValidNwsUrn(`urn:oid:2.49.0.1.840.0.${'x'.repeat(234)}`)).toBe(false);
   });
   // Test 32: No placeholder contract address in production source/configuration
   it('ensures no placeholder or fabricated contract addresses exist in config or environment defaults', () => {

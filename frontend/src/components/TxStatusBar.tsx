@@ -24,9 +24,6 @@ export const TxStatusBar: React.FC<TxStatusBarProps> = ({
   let stageClass = '';
 
   switch (stage) {
-    case 'FEE_REVIEW':
-      message = 'Review the exact fee before opening your wallet.';
-      break;
     case 'WAITING_FOR_WALLET':
       message = 'Confirm this transaction in your wallet.';
       break;
@@ -61,7 +58,6 @@ export const TxStatusBar: React.FC<TxStatusBarProps> = ({
   }
 
   const isPending = !['SUCCESS', 'REJECTED', 'FAILED', 'RECONCILIATION_REQUIRED'].includes(stage);
-  const showSpinner = isPending && stage !== 'FEE_REVIEW';
   const isFailure = ['REJECTED', 'FAILED', 'RECONCILIATION_REQUIRED'].includes(stage);
 
   return (
@@ -72,7 +68,7 @@ export const TxStatusBar: React.FC<TxStatusBarProps> = ({
       aria-live={isFailure ? 'assertive' : 'polite'}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        {showSpinner && <span className="tx-spinner" aria-hidden="true" />}
+        {isPending && <span className="tx-spinner" aria-hidden="true" />}
         <span>{message}</span>
         {explorerUrl && (
           <a

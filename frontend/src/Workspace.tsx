@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { appConfig } from './config';
 import { useActiveWallet } from './services/useActiveWallet';
 import { rpcClient } from './services/rpcClient';
@@ -21,15 +21,6 @@ import { OperativeBulletin } from './components/OperativeBulletin';
 import { VerticalRevisionSpine } from './components/VerticalRevisionSpine';
 import { ContextualActionPanel } from './components/ContextualActionPanel';
 import { AuditArea } from './components/AuditArea';
-import { ConfirmationModal } from './components/ConfirmationModal';
-import { FeeReview, writeManager } from './services/writeManager';
-
-function formatGenAmount(value: string): string {
-  const units = BigInt(value);
-  const whole = units / 10n ** 18n;
-  const fraction = (units % 10n ** 18n).toString().padStart(18, '0').replace(/0+$/, '');
-  return fraction ? `${whole}.${fraction}` : whole.toString();
-}
 
 export const Workspace: React.FC = () => {
   const {
@@ -52,8 +43,6 @@ export const Workspace: React.FC = () => {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletConnectError, setWalletConnectError] = useState<string | null>(null);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-  const [feeReview, setFeeReview] = useState<FeeReview | null>(null);
-  const feeReviewResolver = useRef<((approved: boolean) => void) | null>(null);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
 
   // Contract State
@@ -109,25 +98,6 @@ export const Workspace: React.FC = () => {
       if (!signal?.aborted) setIsLoadingChannels(false);
     }
   }, [selectedChannelId]);
-
-  useEffect(() => {
-    writeManager.setFeeApprovalHandler((review) => new Promise<boolean>((resolve) => {
-      feeReviewResolver.current = resolve;
-      setFeeReview(review);
-    }));
-    return () => {
-      feeReviewResolver.current?.(false);
-      feeReviewResolver.current = null;
-      writeManager.setFeeApprovalHandler(null);
-    };
-  }, []);
-
-  const resolveFeeReview = (approved: boolean) => {
-    const resolve = feeReviewResolver.current;
-    feeReviewResolver.current = null;
-    setFeeReview(null);
-    resolve?.(approved);
-  };
 
   // Load Selected Channel Details (Chains, Audit Events, Subscription)
   const loadChannelData = useCallback(async (channelId: number, signal?: AbortSignal) => {
@@ -237,7 +207,7 @@ export const Workspace: React.FC = () => {
 
   return (
     <div className="veridex-root">
-      <div inert={isWalletModalOpen || isConfirmationModalOpen || feeReview !== null ? true : undefined}>
+      <div inert={isWalletModalOpen || isConfirmationModalOpen ? true : undefined}>
       <Header
         activeWallet={connectedWallet}
         onOpenConnectModal={() => {
@@ -368,22 +338,6 @@ export const Workspace: React.FC = () => {
           closeWalletChooser();
           setIsWalletModalOpen(false);
         }}
-      />
-
-      <ConfirmationModal
-        isOpen={feeReview !== null}
-        title="Review GenLayer transaction fee"
-        message={feeReview ? (
-          <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
-            <p><strong>Action:</strong> {feeReview.method.replaceAll('_', ' ')}</p>
-            <p><strong>Maximum fee:</strong> {formatGenAmount(feeReview.feeValue)} GEN</p>
-            <p>Continue to open your wallet and review the signature request. No transaction has been submitted yet.</p>
-          </div>
-        ) : null}
-        confirmLabel="Continue to Wallet"
-        cancelLabel="Cancel"
-        onConfirm={() => resolveFeeReview(true)}
-        onCancel={() => resolveFeeReview(false)}
       />
     </div>
   );

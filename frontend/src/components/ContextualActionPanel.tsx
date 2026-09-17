@@ -11,6 +11,7 @@ import { writeManager } from '../services/writeManager';
 import { ConfirmationModal } from './ConfirmationModal';
 
 export const isValidNwsUrn = (value: string): boolean =>
+  value.trim().length >= 16 && value.trim().length <= 256 &&
   /^urn:oid:2\.49\.0\.1\.840\.0\.[A-Za-z0-9._-]+$/.test(value.trim());
 
 interface ContextualActionPanelProps {
